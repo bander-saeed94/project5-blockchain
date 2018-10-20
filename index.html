@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Notary</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js/dist/web3.min.js"></script>
+
+    <script language="javascript" type="text/javascript" src="./starnotary_abi.js"></script>
+
+</head>
+
+<body>
+    <div class="container">
+        <h1>Star Notary</h1>
+
+        <!-- create star-->
+        <div class="row">
+            <label class="bold">Enter Star Name:</label>
+            <input id="star-name-input" type="text"></label>
+        </div>
+        <div class="row">
+            <label class="bold">Enter Star Story:</label>
+            <input id="story-input" type="text"></label>
+        </div>
+        <div class="row">
+            <label class="bold">Enter Star Cent:</label>
+            <input id="cent-input" type="text"></label>
+        </div>
+        <div class="row">
+            <label class="bold">Enter Star Dec:</label>
+            <input id="dec-input" type="text"></label>
+        </div>
+        <div class="row">
+            <label class="bold">Enter Star Mag:</label>
+            <input id="mag-input" type="text">
+        </div>
+
+        <!-- output create star-->
+        <div class="row">
+            <label class="bold">Token Id:</label>
+            <label id="tokenId"></label>
+        </div>
+        <div class="row">
+            <label class="bold">Star Name:</label>
+            <label id="star-name"></label>
+        </div>
+        <div class="row">
+            <label class="bold">Star Owner:</label>
+            <label id="star-owner"></label>
+        </div>
+
+        <button id="claim-button" onclick="callCreateStar()">Claim Star</button>
+
+
+        <!-- Put up a star for sale-->
+        <div class="row">
+            <label class="bold">Token Id:</label>
+            <input id="tokenId-for-sale" type="number">
+        </div>
+        <div class="row">
+            <label class="bold">Price:</label>
+            <input id="price-for-sale" type="number">
+        </div>
+        <button id="put-up-for-sale-button" onclick="putStarUpForSale()">Put Up for sale</button>
+
+
+
+        <!-- owner Of -->
+        <div class="row">
+            <label class="bold">Token:</label>
+            <input id="ownerOf-tokenId-input" type="number">
+        </div>
+        <div class="row">
+            <label class="bold">Owner:</label>
+            <label id="ownerOf-tokenId-label"></label>
+        </div>
+        <button onclick="ownerOf()">Owner Of:</button>
+
+
+        <!-- buy star -->
+        <div class="row">
+            <label class="bold">Token:</label>
+            <input id="buy-tokenId-input" type="number">
+        </div>
+        <div class="row">
+            <label class="bold">Price:</label>
+            <input id="buy-price-input" type="number">
+        </div>
+        <button onclick="buyStar()">buy star</button>
+
+    </div>
+    <script>
+        var starNotary;
+        var userAccount;
+
+        function startApp() {
+            var starNotaryAddress = "0x5f58c06e4109b7d3c48dfcd07e0c7ffcacff96c4";
+            var StarNotary = web3.eth.contract(starNotaryABI)
+            starNotary = StarNotary.at(starNotaryAddress);
+            // starNotary = new web3js.eth.Contract(starNotaryABI, starNotaryAddress);
+
+            var accountInterval = setInterval(function () {
+                // Check if account has changed
+                if (web3.eth.accounts[0] !== userAccount) {
+                    userAccount = web3.eth.accounts[0];
+                }
+            }, 100);
+        }
+
+        // Start here
+
+
+        function callCreateStar() {
+            let name = document.getElementById('star-name-input').value
+            let story = document.getElementById('story-input').value
+            let cent = document.getElementById('cent-input').value
+            let dec = document.getElementById('dec-input').value
+            let mag = document.getElementById('mag-input').value
+
+            starNotary.createStar(name, story, cent, dec, mag, function (error, result) {
+                if (error) return console.log(error)
+
+                var starTransferEvent = starNotary.Transfer({ to: userAccount });
+                starTransferEvent.watch(function (error, result) {
+                    if (!error) {
+                        console.log(result)
+                        let tokenId = result.args.tokenId.toNumber()
+                        document.getElementById('tokenId').innerText = tokenId
+                        document.getElementById('star-owner').innerText = userAccount
+                        starNotary.tokenIdToStarInfo(tokenId, function (err, result) {
+                            document.getElementById('star-name').innerText = result[0]
+                        })
+                        // console.log(result.args.tokenId.toNumber())
+                    } else {
+                        console.log('watching for star claimed event is failing');
+                    }
+                });
+                console.log(result)
+            })
+        }
+
+        function putStarUpForSale() {
+            let price = document.getElementById('price-for-sale').value
+            let starPrice = web3.toWei(price, "ether")
+
+            let tokenId = document.getElementById('tokenId-for-sale').value
+            starNotary.putStarUpForSale(tokenId, starPrice, function (err, result) {
+                if(err) return console.log(err)
+                console.log(result)
+
+            })
+        }
+
+        function buyStar(){
+            let tokenId = document.getElementById('buy-tokenId-input').value
+            let price = document.getElementById('buy-price-input').value
+            let starPrice = web3.toWei(price, "ether")
+
+            starNotary.buyStar(tokenId, {value: starPrice}, function(error, result){
+                var starTransferEvent = starNotary.Transfer({ to: userAccount });
+                starTransferEvent.watch(function (error, result) {
+                    if (!error) {
+                        console.log(result)
+                        let tokenId = result.args.tokenId.toNumber()
+                        document.getElementById('tokenId').innerText = tokenId
+                        document.getElementById('star-owner').innerText = userAccount
+                        starNotary.tokenIdToStarInfo(tokenId, function (err, result) {
+                            document.getElementById('star-name').innerText = result[0]
+                        })
+                        // console.log(result.args.tokenId.toNumber())
+                    } else {
+                        console.log('watching for star claimed event is failing');
+                    }
+                });
+            })
+
+        }
+
+        function ownerOf(){
+            let tokenId = document.getElementById('ownerOf-tokenId-input').value
+            starNotary.ownerOf(tokenId, function (err, result) {
+                document.getElementById('ownerOf-tokenId-label').innerText = result
+            })
+        }
+
+
+
+        window.addEventListener('load', function () {
+
+            // Checking if Web3 has been injected by the browser (Mist/MetaMask)
+            if (typeof web3 !== 'undefined') {
+                // Use Mist/MetaMask's provider
+                web3js = new Web3(web3.currentProvider);
+            } else {
+                // Handle the case where the user doesn't have Metamask installed
+                // Probably show them a message prompting them to install Metamask
+                web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+
+            }
+
+            // Now you can start your app & access web3 freely:
+            startApp()
+
+        })
+    </script>
+</body>
+
+</html>
