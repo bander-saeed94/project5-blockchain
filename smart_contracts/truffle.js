@@ -48,7 +48,9 @@ module.exports = {
 
 //been put for sale 
 
-//buy
+
+
+//bought
 //https://rinkeby.etherscan.io/tx/0xbbf92d13e93201338add44e23fd930432773cd8b44ffc5f9d3bbbf97b1ea00ba
 
 
